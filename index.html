@@ -208,122 +208,105 @@
         </div>
     </div>
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
-        import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
+       <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+    import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyBOyZ3As4GTuNvjemvPF_SpsC6m6vqtNhc",
-            authDomain: "fire-b-a8878.firebaseapp.com",
-            databaseURL: "https://fire-b-a8878.firebaseio.com",
-            projectId: "fire-b-a8878",
-            storageBucket: "fire-b-a8878.appspot.com",
-            messagingSenderId: "658673187627",
-            appId: "1:658673187627:web:6e4c29af661785f0afa36e"
-        };
+    const firebaseConfig = {
+        apiKey: "AIzaSyBOyZ3As4GTuNvjemvPF_SpsC6m6vqtNhc",
+        authDomain: "fire-b-a8878.firebaseapp.com",
+        databaseURL: "https://fire-b-a8878.firebaseio.com",
+        projectId: "fire-b-a8878",
+        storageBucket: "fire-b-a8878.appspot.com",
+        messagingSenderId: "658673187627",
+        appId: "1:658673187627:web:6e4c29af661785f0afa36e"
+    };
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const database = getDatabase(app);
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
 
-        // GSAP Animations
-        gsap.from(".logo", { duration: 1, y: -50, opacity: 0, ease: "power3.out" });
-        gsap.from("h1", { duration: 1, y: -60, opacity: 0, ease: "power3.out" });
-        gsap.from(".admin-panel", { duration: 1.2, scale: 0.9, opacity: 0, delay: 0.6, ease: "elastic.out(1, 0.6)" });
-        gsap.to(".circuit-overlay path", { duration: 12, strokeDashoffset: -120, repeat: -1, ease: "none" });
+    gsap.from(".logo", { duration: 1, y: -50, opacity: 0, ease: "power3.out" });
+    gsap.from("h1", { duration: 1, y: -60, opacity: 0, ease: "power3.out" });
+    gsap.from(".admin-panel", { duration: 1.2, scale: 0.9, opacity: 0, delay: 0.6, ease: "elastic.out(1, 0.6)" });
+    gsap.to(".circuit-overlay path", { duration: 12, strokeDashoffset: -120, repeat: -1, ease: "none" });
 
-        // Check if user is admin
-        onAuthStateChanged(auth, (user) => {
-            if (!user) {
-                window.location.href = "signin.html";
-            } else {
-                // Assume admin role check (e.g., custom claim or database check)
-                const userRef = ref(database, `users/${user.uid}`);
-                onValue(userRef, (snapshot) => {
-                    const data = snapshot.val();
-                    if (!data || !data.isAdmin) {
-                        showAlert("Access denied. Admin privileges required.", false);
-                        setTimeout(() => { window.location.href = "index.html"; }, 3000);
-                    } else {
-                        loadRegistrations();
+    loadRegistrations();
+
+    function loadRegistrations() {
+        const registrationList = document.getElementById("registration-list");
+        const registrationsRef = ref(database, 'registrations');
+        onValue(registrationsRef, (snapshot) => {
+            registrationList.innerHTML = '';
+            const registrations = snapshot.val();
+            if (registrations) {
+                Object.entries(registrations).forEach(([id, data]) => {
+                    if (data.status === 'pending') {
+                        const item = document.createElement('div');
+                        item.className = 'registration-item';
+                        item.innerHTML = `
+                            <p><strong>Name:</strong> ${data.name}</p>
+                            <p><strong>Institution Email:</strong> ${data.institutionEmail}</p>
+                            <p><strong>Personal Email:</strong> ${data.personalEmail}</p>
+                            <p><strong>School:</strong> ${data.school}</p>
+                            <p><strong>Location:</strong> ${data.location}</p>
+                            <p><strong>Course:</strong> ${data.course}</p>
+                            <div>
+                                <button class="btn-glow" onclick="approveRegistration('${id}', '${data.institutionEmail}')">Approve</button>
+                                <button class="btn-glow btn-reject" onclick="rejectRegistration('${id}')">Reject</button>
+                            </div>
+                        `;
+                        registrationList.appendChild(item);
+                        gsap.from(item, { duration: 0.5, opacity: 0, y: 20, ease: "power2.out" });
                     }
                 });
+            } else {
+                registrationList.innerHTML = '<p class="text-gray-300">No pending registrations.</p>';
             }
         });
+    }
 
-        function loadRegistrations() {
-            const registrationList = document.getElementById("registration-list");
-            const registrationsRef = ref(database, 'registrations');
-            onValue(registrationsRef, (snapshot) => {
-                registrationList.innerHTML = '';
-                const registrations = snapshot.val();
-                if (registrations) {
-                    Object.entries(registrations).forEach(([id, data]) => {
-                        if (data.status === 'pending') {
-                            const item = document.createElement('div');
-                            item.className = 'registration-item';
-                            item.innerHTML = `
-                                <p><strong>Name:</strong> ${data.name}</p>
-                                <p><strong>Institution Email:</strong> ${data.institutionEmail}</p>
-                                <p><strong>Personal Email:</strong> ${data.personalEmail}</p>
-                                <p><strong>School:</strong> ${data.school}</p>
-                                <p><strong>Location:</strong> ${data.location}</p>
-                                <p><strong>Course:</strong> ${data.course}</p>
-                                <div>
-                                    <button class="btn-glow" onclick="approveRegistration('${id}', '${data.institutionEmail}')">Approve</button>
-                                    <button class="btn-glow btn-reject" onclick="rejectRegistration('${id}')">Reject</button>
-                                </div>
-                            `;
-                            registrationList.appendChild(item);
-                            gsap.from(item, { duration: 0.5, opacity: 0, y: 20, ease: "power2.out" });
-                        }
-                    });
-                } else {
-                    registrationList.innerHTML = '<p class="text-gray-300">No pending registrations.</p>';
-                }
-            });
+    window.approveRegistration = async function(id, email) {
+        try {
+            await update(ref(database, `registrations/${id}`), { status: 'approved' });
+            showAlert(`Registration approved. Email sent to ${email}.`);
+        } catch (error) {
+            showAlert(`Error: ${error.message}. Please try again.`, false);
         }
+    };
 
-        window.approveRegistration = async function(id, email) {
-            try {
-                await update(ref(database, `registrations/${id}`), { status: 'approved' });
-                showAlert(`Registration approved. Email sent to ${email}.`);
-            } catch (error) {
-                showAlert(`Error: ${error.message}. Please try again.`, false);
-            }
-        };
-
-        window.rejectRegistration = async function(id) {
-            try {
-                await update(ref(database, `registrations/${id}`), { status: 'rejected' });
-                showAlert('Registration rejected.');
-            } catch (error) {
-                showAlert(`Error: ${error.message}. Please try again.`, false);
-            }
-        };
-
-        function showAlert(message, autoHide = true) {
-            const alertModal = document.getElementById('custom-alert');
-            const alertMessage = document.getElementById('alert-message');
-            alertMessage.textContent = message;
-            alertModal.style.display = 'flex';
-            gsap.to(".alert-content", { duration: 0.5, opacity: 1, ease: "power2.out" });
-            if (autoHide) {
-                setTimeout(() => closeAlert(), 5000);
-            }
+    window.rejectRegistration = async function(id) {
+        try {
+            await update(ref(database, `registrations/${id}`), { status: 'rejected' });
+            showAlert('Registration rejected.');
+        } catch (error) {
+            showAlert(`Error: ${error.message}. Please try again.`, false);
         }
+    };
 
-        window.closeAlert = function() {
-            const alertModal = document.getElementById('custom-alert');
-            gsap.to(".alert-content", { 
-                duration: 0.3, 
-                opacity: 0, 
-                ease: "power2.in", 
-                onComplete: () => {
-                    alertModal.style.display = 'none';
-                }
-            });
-        };
+    function showAlert(message, autoHide = true) {
+        const alertModal = document.getElementById('custom-alert');
+        const alertMessage = document.getElementById('alert-message');
+        alertMessage.textContent = message;
+        alertModal.style.display = 'flex';
+        gsap.to(".alert-content", { duration: 0.5, opacity: 1, ease: "power2.out" });
+        if (autoHide) {
+            setTimeout(() => closeAlert(), 5000);
+        }
+    }
+
+    window.closeAlert = function() {
+        const alertModal = document.getElementById('custom-alert');
+        gsap.to(".alert-content", { 
+            duration: 0.3, 
+            opacity: 0, 
+            ease: "power2.in", 
+            onComplete: () => {
+                alertModal.style.display = 'none';
+            }
+        });
+    };
+</script>
+
     </script>
 </body>
 </html>
