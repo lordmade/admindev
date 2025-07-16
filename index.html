@@ -348,24 +348,35 @@
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 showSpinner();
-                const userRef = ref(database, `users/${user.uid}`);
-                onValue(userRef, (snapshot) => {
-                    const data = snapshot.val();
-                    if (data && data.isAdmin) {
-                        setTimeout(() => { window.location.href = "admin.html"; }, 1000); // Delay for spinner visibility
-                    } else {
-                        gsap.to("#spinner-overlay", { 
-                            duration: 0.3, 
-                            opacity: 0, 
-                            ease: "power2.in", 
-                            onComplete: () => {
-                                document.getElementById('spinner-overlay').style.display = 'none';
-                                showAlert("Access denied. Admin privileges required.", false);
-                                setTimeout(() => { window.location.href = "signup.html"; }, 3000);
-                            }
-                        });
-                    }
-                }, { onlyOnce: true });
+              import { get } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
+
+// Inside onAuthStateChanged
+onAuthStateChanged(auth, async (user) => {
+    if (user) {
+        showSpinner();
+        try {
+            const snapshot = await get(ref(database, `users/${user.uid}`));
+            const data = snapshot.val();
+            if (data && data.isAdmin) {
+                setTimeout(() => { window.location.href = "admin.html"; }, 1000);
+            } else {
+                throw new Error("Not an admin");
+            }
+        } catch (error) {
+            gsap.to("#spinner-overlay", {
+                duration: 0.3,
+                opacity: 0,
+                ease: "power2.in",
+                onComplete: () => {
+                    document.getElementById('spinner-overlay').style.display = 'none';
+                    showAlert("Access denied. Admin privileges required.", false);
+                    setTimeout(() => { window.location.href = "signup.html"; }, 3000);
+                }
+            });
+        }
+    }
+});
+
             }
         });
 
