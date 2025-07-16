@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Rare Grade Devs - Admin Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #020084, #0404d8);
+            color: #f1f5f9;
+            font-family: 'Fira Code', monospace;
+            overflow-x: hidden;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            padding: 2rem;
+            position: relative;
+        }
+        .circuit-overlay {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: -1;
+            opacity: 0.2;
+        }
+        .logo {
+            max-width: 150px;
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+        .admin-panel {
+            background: rgba(30, 64, 175, 0.9);
+            backdrop-filter: blur(12px);
+            border-radius: 1.5rem;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            width: 100%;
+        }
+        .gradient-text {
+            background: linear-gradient(90deg, #3b82f6, #a855f7, #3b82f6);
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shine 3s linear infinite;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+            font-weight: 700;
+        }
+        @keyframes shine {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 200% 50%; }
+        }
+        .registration-list {
+            margin-top: 1.5rem;
+        }
+        .registration-item {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid #93c5fd;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .btn-glow {
+            position: relative;
+            overflow: hidden;
+            font-family: 'Fira Code', monospace;
+            background: #ffffff;
+            color: #020084;
+            border-radius: 9999px;
+            font-weight: 600;
+            border: 1px solid #020084;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+        }
+        .btn-glow::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.3), transparent);
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        .btn-glow:hover::after {
+            opacity: 1;
+        }
+        .btn-glow:hover {
+            background: #e5e7eb;
+        }
+        .btn-reject {
+            background: #ef4444;
+            color: #ffffff;
+            border: 1px solid #b91c1c;
+        }
+        .btn-reject:hover {
+            background: #dc2626;
+        }
+        .alert-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(2, 0, 132, 0.8);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .alert-content {
+            background: rgba(30, 64, 175, 0.95);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            max-width: 90%;
+            width: 400px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            border: 1px solid #93c5fd;
+            opacity: 0;
+        }
+        .alert-content p {
+            font-family: 'Fira Code', monospace;
+            color: #f1f5f9;
+            margin-bottom: 1rem;
+        }
+        .alert-close {
+            background: #ffffff;
+            color: #020084;
+            border-radius: 9999px;
+            padding: 0.5rem 1rem;
+            font-family: 'Fira Code', monospace;
+            font-weight: 600;
+            border: 1px solid #020084;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        .alert-close:hover {
+            background: #e5e7eb;
+        }
+        @media (max-width: 640px) {
+            .container {
+                padding: 1rem;
+            }
+            .admin-panel {
+                padding: 1rem;
+            }
+            .logo {
+                max-width: 100px;
+            }
+            .registration-item {
+                padding: 0.75rem;
+            }
+            .btn-glow, .btn-reject {
+                padding: 0.4rem 0.8rem;
+                font-size: 0.875rem;
+            }
+            .alert-content {
+                width: 90%;
+                padding: 1rem;
+            }
+            .alert-content p {
+                font-size: 0.875rem;
+            }
+            .alert-close {
+                padding: 0.4rem 0.8rem;
+                font-size: 0.875rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <svg class="circuit-overlay">
+            <path d="M0 150 Q 300 50, 600 150 T 1200 150 T 1800 150" stroke="#93c5fd" stroke-width="2" fill="none" stroke-dasharray="8,8"></path>
+        </svg>
+        <img src="https://dashboard.raregradetech.com/uploads/company/b65f0e95c1b847586fb52cd9c734f19a.png" alt="Rare Grade Tech Logo" class="logo">
+        <h1 class="text-3xl sm:text-4xl font-extrabold text-white mb-4">
+            Rare Grade <span class="gradient-text">Devs</span> - Admin Panel
+        </h1>
+        <div class="admin-panel">
+            <h2 class="text-xl sm:text-2xl font-semibold text-white mb-6">Pending Registrations</h2>
+            <div id="registration-list" class="registration-list"></div>
+        </div>
+        <div id="custom-alert" class="alert-modal">
+            <div class="alert-content">
+                <p id="alert-message"></p>
+                <button class="alert-close" onclick="closeAlert()">Close</button>
+            </div>
+        </div>
+    </div>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+        import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBOyZ3As4GTuNvjemvPF_SpsC6m6vqtNhc",
+            authDomain: "fire-b-a8878.firebaseapp.com",
+            databaseURL: "https://fire-b-a8878.firebaseio.com",
+            projectId: "fire-b-a8878",
+            storageBucket: "fire-b-a8878.appspot.com",
+            messagingSenderId: "658673187627",
+            appId: "1:658673187627:web:6e4c29af661785f0afa36e"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const database = getDatabase(app);
+
+        // GSAP Animations
+        gsap.from(".logo", { duration: 1, y: -50, opacity: 0, ease: "power3.out" });
+        gsap.from("h1", { duration: 1, y: -60, opacity: 0, ease: "power3.out" });
+        gsap.from(".admin-panel", { duration: 1.2, scale: 0.9, opacity: 0, delay: 0.6, ease: "elastic.out(1, 0.6)" });
+        gsap.to(".circuit-overlay path", { duration: 12, strokeDashoffset: -120, repeat: -1, ease: "none" });
+
+        // Check if user is admin
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = "signin.html";
+            } else {
+                // Assume admin role check (e.g., custom claim or database check)
+                const userRef = ref(database, `users/${user.uid}`);
+                onValue(userRef, (snapshot) => {
+                    const data = snapshot.val();
+                    if (!data || !data.isAdmin) {
+                        showAlert("Access denied. Admin privileges required.", false);
+                        setTimeout(() => { window.location.href = "index.html"; }, 3000);
+                    } else {
+                        loadRegistrations();
+                    }
+                });
+            }
+        });
+
+        function loadRegistrations() {
+            const registrationList = document.getElementById("registration-list");
+            const registrationsRef = ref(database, 'registrations');
+            onValue(registrationsRef, (snapshot) => {
+                registrationList.innerHTML = '';
+                const registrations = snapshot.val();
+                if (registrations) {
+                    Object.entries(registrations).forEach(([id, data]) => {
+                        if (data.status === 'pending') {
+                            const item = document.createElement('div');
+                            item.className = 'registration-item';
+                            item.innerHTML = `
+                                <p><strong>Name:</strong> ${data.name}</p>
+                                <p><strong>Institution Email:</strong> ${data.institutionEmail}</p>
+                                <p><strong>Personal Email:</strong> ${data.personalEmail}</p>
+                                <p><strong>School:</strong> ${data.school}</p>
+                                <p><strong>Location:</strong> ${data.location}</p>
+                                <p><strong>Course:</strong> ${data.course}</p>
+                                <div>
+                                    <button class="btn-glow" onclick="approveRegistration('${id}', '${data.institutionEmail}')">Approve</button>
+                                    <button class="btn-glow btn-reject" onclick="rejectRegistration('${id}')">Reject</button>
+                                </div>
+                            `;
+                            registrationList.appendChild(item);
+                            gsap.from(item, { duration: 0.5, opacity: 0, y: 20, ease: "power2.out" });
+                        }
+                    });
+                } else {
+                    registrationList.innerHTML = '<p class="text-gray-300">No pending registrations.</p>';
+                }
+            });
+        }
+
+        window.approveRegistration = async function(id, email) {
+            try {
+                await update(ref(database, `registrations/${id}`), { status: 'approved' });
+                showAlert(`Registration approved. Email sent to ${email}.`);
+            } catch (error) {
+                showAlert(`Error: ${error.message}. Please try again.`, false);
+            }
+        };
+
+        window.rejectRegistration = async function(id) {
+            try {
+                await update(ref(database, `registrations/${id}`), { status: 'rejected' });
+                showAlert('Registration rejected.');
+            } catch (error) {
+                showAlert(`Error: ${error.message}. Please try again.`, false);
+            }
+        };
+
+        function showAlert(message, autoHide = true) {
+            const alertModal = document.getElementById('custom-alert');
+            const alertMessage = document.getElementById('alert-message');
+            alertMessage.textContent = message;
+            alertModal.style.display = 'flex';
+            gsap.to(".alert-content", { duration: 0.5, opacity: 1, ease: "power2.out" });
+            if (autoHide) {
+                setTimeout(() => closeAlert(), 5000);
+            }
+        }
+
+        window.closeAlert = function() {
+            const alertModal = document.getElementById('custom-alert');
+            gsap.to(".alert-content", { 
+                duration: 0.3, 
+                opacity: 0, 
+                ease: "power2.in", 
+                onComplete: () => {
+                    alertModal.style.display = 'none';
+                }
+            });
+        };
+    </script>
+</body>
+</html>
