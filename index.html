@@ -305,8 +305,8 @@
     </div>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
-        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
+        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+        import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBOyZ3As4GTuNvjemvPF_SpsC6m6vqtNhc",
@@ -360,69 +360,20 @@
             });
         }
 
-        // Redirect if already authenticated
-        onAuthStateChanged(auth, (user) => {
-            console.log("Auth state changed:", user ? `User ${user.uid}` : "No user");
-            if (user) {
-                showSpinner();
-                const userRef = ref(database, `users/${user.uid}`);
-                onValue(userRef, (snapshot) => {
-                    const data = snapshot.val();
-                    console.log("User data:", data);
-                    if (data && data.isAdmin === true) {
-                        console.log("User is admin, redirecting to admin.html");
-                        setTimeout(() => { 
-                            window.location.href = "admin.html"; 
-                        }, 1000);
-                    } else {
-                        console.log("User is not admin or data missing, redirecting to index.html");
-                        hideSpinner();
-                        showAlert("Access denied. Admin privileges required.", false);
-                        setTimeout(() => { window.location.href = "index.html"; }, 3000);
-                    }
-                }, { 
-                    onlyOnce: true,
-                    onError: (error) => {
-                        console.error("Database error:", error);
-                        hideSpinner();
-                        showAlert("Error accessing user data. Please try again.", false);
-                        setTimeout(() => { window.location.href = "index.html"; }, 3000);
-                    }
-                });
-            } else {
-                console.log("No authenticated user, staying on signin.html");
-            }
-        });
-
-        window.signIn = async function() {
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
+        // Show alert
+        function showAlert(message, autoClose = true) {
+            console.log("Showing alert:", message);
             const alertModal = document.getElementById('custom-alert');
             const alertMessage = document.getElementById('alert-message');
-
-            if (!email || !password) {
-                console.log("Missing email or password");
-                alertMessage.textContent = 'Please fill in all fields.';
-                alertModal.style.display = 'flex';
-                gsap.to(".alert-content", { duration: 0.5, opacity: 1, ease: "power2.out" });
-                return;
+            alertMessage.textContent = message;
+            alertModal.style.display = 'flex';
+            gsap.to(".alert-content", { duration: 0.5, opacity: 1, ease: "power2.out" });
+            if (autoClose) {
+                setTimeout(() => closeAlert(), 3000);
             }
+        }
 
-            try {
-                console.log("Attempting sign-in for:", email);
-                showSpinner();
-                await signInWithEmailAndPassword(auth, email, password);
-                console.log("Sign-in successful, onAuthStateChanged will handle redirect");
-                // onAuthStateChanged will handle redirect
-            } catch (error) {
-                console.error("Sign-in error:", error);
-                hideSpinner();
-                alertMessage.textContent = `Error: ${error.message}`;
-                alertModal.style.display = 'flex';
-                gsap.to(".alert-content", { duration: 0.5, opacity: 1, ease: "power2.out" });
-            }
-        };
-
+        // Close alert
         window.closeAlert = function() {
             console.log("Closing alert");
             const alertModal = document.getElementById('custom-alert');
@@ -434,6 +385,51 @@
                     alertModal.style.display = 'none';
                 }
             });
+        };
+
+        window.signIn = async function() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            if (!email || !password) {
+                console.log("Missing email or password");
+                showAlert("Please fill in all fields.", false);
+                return;
+            }
+
+            try {
+                console.log("Attempting sign-in for:", email);
+                showSpinner();
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+                console.log("Sign-in successful for user:", user.uid);
+
+                // Check if user is admin
+                const userRef = ref(database, `users/${user.uid}`);
+                try {
+                    const snapshot = await get(userRef);
+                    const data = snapshot.val();
+                    console.log("User data:", data);
+                    if (data && data.isAdmin === true) {
+                        console.log("User is admin, redirecting to admin.html");
+                        setTimeout(() => { 
+                            window.location.href = "admin.html"; 
+                        }, 1000);
+                    } else {
+                        console.log("User is not admin or data missing");
+                        hideSpinner();
+                        showAlert("Access denied. Admin privileges required.", false);
+                    }
+                } catch (error) {
+                    console.error("Database error:", error);
+                    hideSpinner();
+                    showAlert("Error accessing user data. Please try again.", false);
+                }
+            } catch (error) {
+                console.error("Sign-in error:", error);
+                hideSpinner();
+                showAlert(`Error: ${error.message}`, false);
+            }
         };
     </script>
 </body>
